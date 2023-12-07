@@ -27,28 +27,44 @@ export async function run(): Promise<void> {
     }
 
     core.info('Creating docker context ...')
-    execSync(
-      `docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`,
-      { stdio: [] }
-    )
-    execSync(`docker context use target`, { stdio: [] })
+    try {
+      execSync(
+        `docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`,
+        { stdio: [] }
+      )
+      execSync(`docker context use target`, { stdio: [] })
+    } catch (error: unknown) {
+      core.setFailed(`Failed to initialise context: ${error}`)
+    }
 
-    core.info('Initialising Swarm if required ...')
-    execSync('docker node ls || docker swarm init', { stdio: [] })
+    try {
+      core.info('Initialising Swarm if required ...')
+      execSync('docker node ls || docker swarm init', { stdio: [] })
+    } catch (error: unknown) {
+      core.setFailed(`Failed to initialise Swarm: ${error}`)
+    }
 
     const dockerStackAwaitImage = 'sudobmitch/docker-stack-wait:v0.2.5'
     execSync(`docker pull ${dockerStackAwaitImage}`, { stdio: [] })
 
     core.info('Deploying stack ...')
-    execSync(
-      `docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`,
-      { stdio: [] }
-    )
+    try {
+      execSync(
+        `docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`,
+        { stdio: [] }
+      )
+    } catch (error: unknown) {
+      core.setFailed(`Failed to initialise deploy stack: ${error}`)
+    }
 
     core.info('Waiting for deployment to complete ...')
-    execSync(
-      `docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock ${dockerStackAwaitImage} -l "--since 2m" -t 120 ${stackName}`
-    )
+    try {
+      execSync(
+        `docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock ${dockerStackAwaitImage} -l "--since 2m" -t 120 ${stackName}`
+      )
+    } catch (error: unknown) {
+      core.setFailed(`Deployment appears to not complete: ${error}`)
+    }
 
     core.info('Cleaning up ...')
     execSync('docker system prune -af', { stdio: [] })

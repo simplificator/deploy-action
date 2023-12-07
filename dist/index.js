@@ -2778,16 +2778,36 @@ async function run() {
             core.setFailed(`SSH connection failed: ${error}`);
         }
         core.info('Creating docker context ...');
-        (0, child_process_1.execSync)(`docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`, { stdio: [] });
-        (0, child_process_1.execSync)(`docker context use target`, { stdio: [] });
-        core.info('Initialising Swarm if required ...');
-        (0, child_process_1.execSync)('docker node ls || docker swarm init', { stdio: [] });
+        try {
+            (0, child_process_1.execSync)(`docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`, { stdio: [] });
+            (0, child_process_1.execSync)(`docker context use target`, { stdio: [] });
+        }
+        catch (error) {
+            core.setFailed(`Failed to initialise context: ${error}`);
+        }
+        try {
+            core.info('Initialising Swarm if required ...');
+            (0, child_process_1.execSync)('docker node ls || docker swarm init', { stdio: [] });
+        }
+        catch (error) {
+            core.setFailed(`Failed to initialise Swarm: ${error}`);
+        }
         const dockerStackAwaitImage = 'sudobmitch/docker-stack-wait:v0.2.5';
         (0, child_process_1.execSync)(`docker pull ${dockerStackAwaitImage}`, { stdio: [] });
         core.info('Deploying stack ...');
-        (0, child_process_1.execSync)(`docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`, { stdio: [] });
+        try {
+            (0, child_process_1.execSync)(`docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`, { stdio: [] });
+        }
+        catch (error) {
+            core.setFailed(`Failed to initialise deploy stack: ${error}`);
+        }
         core.info('Waiting for deployment to complete ...');
-        (0, child_process_1.execSync)(`docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock ${dockerStackAwaitImage} -l "--since 2m" -t 120 ${stackName}`);
+        try {
+            (0, child_process_1.execSync)(`docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock ${dockerStackAwaitImage} -l "--since 2m" -t 120 ${stackName}`);
+        }
+        catch (error) {
+            core.setFailed(`Deployment appears to not complete: ${error}`);
+        }
         core.info('Cleaning up ...');
         (0, child_process_1.execSync)('docker system prune -af', { stdio: [] });
     }

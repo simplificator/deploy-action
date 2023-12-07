@@ -94,6 +94,7 @@ describe('action', () => {
 
     await main.run()
     expect(runMock).toHaveReturned()
+    expect(setFailedMock).not.toHaveBeenCalled()
     expect(infoMock).toHaveBeenCalledWith('Cleaning up ...')
 
     const response = await axios.get('http://127.0.0.1:8888')
