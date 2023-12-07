@@ -43,6 +43,11 @@ jobs:
           docker compose build
           docker compose up &
 
+      - name: Add SSH identity of test server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -t rsa -p 2222 127.0.0.1 >> ~/.ssh/known_hosts
+
       - name: Test
         id: npm-ci-test
         run: npm run ci-test
