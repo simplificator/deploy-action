@@ -2753,22 +2753,28 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = void 0;
 const core = __importStar(__nccwpck_require__(186));
-const wait_1 = __nccwpck_require__(259);
+const child_process_1 = __nccwpck_require__(81);
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
  */
 async function run() {
     try {
-        const ms = core.getInput('milliseconds');
-        // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-        core.debug(`Waiting ${ms} milliseconds ...`);
-        // Log the current timestamp, wait, then log the new timestamp
-        core.debug(new Date().toTimeString());
-        await (0, wait_1.wait)(parseInt(ms, 10));
-        core.debug(new Date().toTimeString());
-        // Set outputs for other workflow steps to use
-        core.setOutput('time', new Date().toTimeString());
+        const composeFile = core.getInput('compose-file');
+        const stackName = core.getInput('stack-name');
+        const sshUserAtHost = core.getInput('ssh-user-at-host');
+        const sshPort = core.getInput('ssh-port');
+        core.info('Creating docker context ...');
+        (0, child_process_1.execSync)(`docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`, { stdio: [] });
+        (0, child_process_1.execSync)(`docker context use target`);
+        core.info('Initialising Swarm if required ...');
+        (0, child_process_1.execSync)('docker node ls || docker swarm init', { stdio: [] });
+        core.info('Deploying stack ...');
+        (0, child_process_1.execSync)(`docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`, { stdio: [] });
+        core.info('Waiting for deployment to complete ...');
+        (0, child_process_1.execSync)(`docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock sudobmitch/docker-stack-wait:v0.2.5 -l "--since 2m" -t 120 ${stackName}`, { stdio: [] });
+        core.info('Cleaning up ...');
+        (0, child_process_1.execSync)('docker system prune -af', { stdio: [] });
     }
     catch (error) {
         // Fail the workflow run if an error occurs
@@ -2781,36 +2787,19 @@ exports.run = run;
 
 /***/ }),
 
-/***/ 259:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.wait = void 0;
-/**
- * Wait for a number of milliseconds.
- * @param milliseconds The number of milliseconds to wait.
- * @returns {Promise<string>} Resolves with 'done!' after the wait is over.
- */
-async function wait(milliseconds) {
-    return new Promise(resolve => {
-        if (isNaN(milliseconds)) {
-            throw new Error('milliseconds not a number');
-        }
-        setTimeout(() => resolve('done!'), milliseconds);
-    });
-}
-exports.wait = wait;
-
-
-/***/ }),
-
 /***/ 491:
 /***/ ((module) => {
 
 "use strict";
 module.exports = require("assert");
+
+/***/ }),
+
+/***/ 81:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("child_process");
 
 /***/ }),
 
