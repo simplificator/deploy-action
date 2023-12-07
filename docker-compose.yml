@@ -9,5 +9,6 @@ services:
     cgroup: host
     ports:
       - 127.0.0.1:2222:22
+      - 127.0.0.1:8888:8080
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
