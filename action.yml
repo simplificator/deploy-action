@@ -9,15 +9,22 @@ branding:
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  compose-file:
+    description: 'Path to the docker-compose file'
     required: true
-    default: '1000'
 
-# Define your outputs here.
-outputs:
-  time:
-    description: 'Your output description here'
+  stack-name:
+    description: 'Name of the stack to deploy'
+    required: true
+
+  ssh-user-at-host:
+    description: 'User@host to connect to'
+    required: true
+  
+  ssh-port:
+    description: "Port to connect to with SSH"
+    required: false
+    default: "22"
 
 runs:
   using: node20

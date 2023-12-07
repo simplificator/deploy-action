@@ -1,0 +1,8 @@
+version: "3.9"
+
+services:
+  web:
+    image: "hashicorp/http-echo"
+    command: ["-text", "Hello World"]
+    ports:
+      - 8080:8080
