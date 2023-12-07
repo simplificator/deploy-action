@@ -17,7 +17,7 @@ export async function run(): Promise<void> {
       `docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`,
       { stdio: [] }
     )
-    execSync(`docker context use target`)
+    execSync(`docker context use target`, { stdio: [] })
 
     core.info('Initialising Swarm if required ...')
     execSync('docker node ls || docker swarm init', { stdio: [] })
