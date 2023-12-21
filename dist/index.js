@@ -2751,9 +2751,10 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
+exports.cleanup = exports.run = void 0;
 const core = __importStar(__nccwpck_require__(186));
 const child_process_1 = __nccwpck_require__(81);
+const fs_1 = __nccwpck_require__(147);
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
@@ -2764,15 +2765,49 @@ async function run() {
         const stackName = core.getInput('stack-name');
         const sshUserAtHost = core.getInput('ssh-user-at-host');
         const sshPort = core.getInput('ssh-port');
+        if (!(0, fs_1.existsSync)(composeFile)) {
+            core.setFailed(`Compose file ${composeFile} does not exist`);
+        }
+        core.info('Check if system is reachable over SSH ...');
+        try {
+            (0, child_process_1.execSync)(`ssh -o ConnectTimeout=5 -p ${sshPort} ${sshUserAtHost} exit`, {
+                stdio: []
+            });
+        }
+        catch (error) {
+            core.setFailed(`SSH connection failed: ${error}`);
+        }
         core.info('Creating docker context ...');
-        (0, child_process_1.execSync)(`docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`, { stdio: [] });
-        (0, child_process_1.execSync)(`docker context use target`);
-        core.info('Initialising Swarm if required ...');
-        (0, child_process_1.execSync)('docker node ls || docker swarm init', { stdio: [] });
+        try {
+            (0, child_process_1.execSync)(`docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`, { stdio: [] });
+            (0, child_process_1.execSync)(`docker context use target`, { stdio: [] });
+        }
+        catch (error) {
+            core.setFailed(`Failed to initialise context: ${error}`);
+        }
+        try {
+            core.info('Initialising Swarm if required ...');
+            (0, child_process_1.execSync)('docker node ls || docker swarm init', { stdio: [] });
+        }
+        catch (error) {
+            core.setFailed(`Failed to initialise Swarm: ${error}`);
+        }
+        const dockerStackAwaitImage = 'sudobmitch/docker-stack-wait:v0.2.5';
+        (0, child_process_1.execSync)(`docker pull ${dockerStackAwaitImage}`, { stdio: [] });
         core.info('Deploying stack ...');
-        (0, child_process_1.execSync)(`docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`, { stdio: [] });
+        try {
+            (0, child_process_1.execSync)(`docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`, { stdio: [] });
+        }
+        catch (error) {
+            core.setFailed(`Failed to initialise deploy stack: ${error}`);
+        }
         core.info('Waiting for deployment to complete ...');
-        (0, child_process_1.execSync)(`docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock sudobmitch/docker-stack-wait:v0.2.5 -l "--since 2m" -t 120 ${stackName}`, { stdio: [] });
+        try {
+            (0, child_process_1.execSync)(`docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock ${dockerStackAwaitImage} -l "--since 2m" -t 120 ${stackName}`);
+        }
+        catch (error) {
+            core.setFailed(`Deployment appears to not complete: ${error}`);
+        }
         core.info('Cleaning up ...');
         (0, child_process_1.execSync)('docker system prune -af', { stdio: [] });
     }
@@ -2783,6 +2818,16 @@ async function run() {
     }
 }
 exports.run = run;
+async function cleanup() {
+    core.info('Removing docker context ...');
+    try {
+        (0, child_process_1.execSync)('docker context remove --force target', { stdio: [] });
+    }
+    catch {
+        core.warning('Failed to remove docker context, ignoring ...');
+    }
+}
+exports.cleanup = cleanup;
 
 
 /***/ }),

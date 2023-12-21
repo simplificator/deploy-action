@@ -38,25 +38,16 @@ jobs:
         id: npm-lint
         run: npm run lint
 
+      - name: Run test server
+        run: |
+          docker compose build
+          docker compose up &
+
+      - name: Add SSH identity of test server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -t rsa -p 2222 127.0.0.1 >> ~/.ssh/known_hosts
+
       - name: Test
         id: npm-ci-test
         run: npm run ci-test
-
-  test-action:
-    name: GitHub Actions Test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v4
-
-      - name: Test Local Action
-        id: test-action
-        uses: ./
-        with:
-          milliseconds: 2000
-
-      - name: Print Output
-        id: output
-        run: echo "${{ steps.test-action.outputs.time }}"

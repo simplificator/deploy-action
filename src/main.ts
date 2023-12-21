@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
 import { execSync } from 'child_process'
+import { existsSync } from 'fs'
 
 /**
  * The main function for the action.
@@ -12,32 +13,72 @@ export async function run(): Promise<void> {
     const sshUserAtHost = core.getInput('ssh-user-at-host')
     const sshPort = core.getInput('ssh-port')
 
-    core.info('Creating docker context ...')
-    execSync(
-      `docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`,
-      { stdio: [] }
-    )
-    execSync(`docker context use target`)
+    if (!existsSync(composeFile)) {
+      core.setFailed(`Compose file ${composeFile} does not exist`)
+    }
 
-    core.info('Initialising Swarm if required ...')
-    execSync('docker node ls || docker swarm init', { stdio: [] })
+    core.info('Check if system is reachable over SSH ...')
+    try {
+      execSync(`ssh -o ConnectTimeout=5 -p ${sshPort} ${sshUserAtHost} exit`, {
+        stdio: []
+      })
+    } catch (error: unknown) {
+      core.setFailed(`SSH connection failed: ${error}`)
+    }
+
+    core.info('Creating docker context ...')
+    try {
+      execSync(
+        `docker context create target --docker "host=ssh://${sshUserAtHost}:${sshPort}"`,
+        { stdio: [] }
+      )
+      execSync(`docker context use target`, { stdio: [] })
+    } catch (error: unknown) {
+      core.setFailed(`Failed to initialise context: ${error}`)
+    }
+
+    try {
+      core.info('Initialising Swarm if required ...')
+      execSync('docker node ls || docker swarm init', { stdio: [] })
+    } catch (error: unknown) {
+      core.setFailed(`Failed to initialise Swarm: ${error}`)
+    }
+
+    const dockerStackAwaitImage = 'sudobmitch/docker-stack-wait:v0.2.5'
+    execSync(`docker pull ${dockerStackAwaitImage}`, { stdio: [] })
 
     core.info('Deploying stack ...')
-    execSync(
-      `docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`,
-      { stdio: [] }
-    )
+    try {
+      execSync(
+        `docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`,
+        { stdio: [] }
+      )
+    } catch (error: unknown) {
+      core.setFailed(`Failed to initialise deploy stack: ${error}`)
+    }
 
     core.info('Waiting for deployment to complete ...')
-    execSync(
-      `docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock sudobmitch/docker-stack-wait:v0.2.5 -l "--since 2m" -t 120 ${stackName}`,
-      { stdio: [] }
-    )
+    try {
+      execSync(
+        `docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock ${dockerStackAwaitImage} -l "--since 2m" -t 120 ${stackName}`
+      )
+    } catch (error: unknown) {
+      core.setFailed(`Deployment appears to not complete: ${error}`)
+    }
 
     core.info('Cleaning up ...')
     execSync('docker system prune -af', { stdio: [] })
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
+  }
+}
+
+export async function cleanup(): Promise<void> {
+  core.info('Removing docker context ...')
+  try {
+    execSync('docker context remove --force target', { stdio: [] })
+  } catch {
+    core.warning('Failed to remove docker context, ignoring ...')
   }
 }
