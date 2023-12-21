@@ -79,6 +79,6 @@ export async function cleanup(): Promise<void> {
   try {
     execSync('docker context remove --force target', { stdio: [] })
   } catch {
-    // Ignore
+    core.warning('Failed to remove docker context, ignoring ...')
   }
 }

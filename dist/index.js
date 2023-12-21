@@ -2824,7 +2824,7 @@ async function cleanup() {
         (0, child_process_1.execSync)('docker context remove --force target', { stdio: [] });
     }
     catch {
-        // Ignore
+        core.warning('Failed to remove docker context, ignoring ...');
     }
 }
 exports.cleanup = cleanup;
