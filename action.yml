@@ -13,6 +13,10 @@ inputs:
     description: 'Path to the docker-compose file'
     required: true
 
+  secrets:
+    description: "Docker secrets to create during the stack"
+    required: false
+
   stack-name:
     description: 'Name of the stack to deploy'
     required: true

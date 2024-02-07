@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import { execSync } from 'child_process'
 import { existsSync } from 'fs'
+import { parseSecrets } from './utilities'
 
 /**
  * The main function for the action.
@@ -9,6 +10,7 @@ import { existsSync } from 'fs'
 export async function run(): Promise<void> {
   try {
     const composeFile = core.getInput('compose-file')
+    const secrets = core.getInput('secrets')
     const stackName = core.getInput('stack-name')
     const sshUserAtHost = core.getInput('ssh-user-at-host')
     const sshPort = core.getInput('ssh-port')
@@ -35,6 +37,23 @@ export async function run(): Promise<void> {
       execSync(`docker context use target`, { stdio: [] })
     } catch (error: unknown) {
       core.setFailed(`Failed to initialise context: ${error}`)
+    }
+
+    const parsedSecrets = parseSecrets(secrets)
+    if (parsedSecrets !== undefined) {
+      for (const secret of parsedSecrets) {
+        core.info(`Creating secret ${secret.name} ...`)
+        try {
+          execSync(
+            `docker secret inspect ${secret.name} || echo ${secret.value} | docker secret create ${secret.name} -`,
+            {
+              stdio: []
+            }
+          )
+        } catch (error: unknown) {
+          core.setFailed(`Failed to create secret ${secret.name}: ${error}`)
+        }
+      }
     }
 
     try {
