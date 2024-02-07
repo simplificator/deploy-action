@@ -2768,7 +2768,7 @@ async function run() {
         const sshUserAtHost = core.getInput('ssh-user-at-host');
         const sshPort = core.getInput('ssh-port');
         if (!(0, fs_1.existsSync)(composeFile)) {
-            core.setFailed(`Compose file ${composeFile} does not exist`);
+            throw new Error(`Compose file ${composeFile} does not exist`);
         }
         core.info('Check if system is reachable over SSH ...');
         try {
@@ -2777,7 +2777,7 @@ async function run() {
             });
         }
         catch (error) {
-            core.setFailed(`SSH connection failed: ${error}`);
+            throw new Error(`SSH connection failed: ${error}`);
         }
         core.info('Creating docker context ...');
         try {
@@ -2785,7 +2785,7 @@ async function run() {
             (0, child_process_1.execSync)(`docker context use target`, { stdio: [] });
         }
         catch (error) {
-            core.setFailed(`Failed to initialise context: ${error}`);
+            throw new Error(`Failed to create docker context: ${error}`);
         }
         const parsedSecrets = (0, utilities_1.parseSecrets)(secrets);
         if (parsedSecrets !== undefined) {
@@ -2797,7 +2797,7 @@ async function run() {
                     });
                 }
                 catch (error) {
-                    core.setFailed(`Failed to create secret ${secret.name}: ${error}`);
+                    throw new Error(`Failed to create secret ${secret.name}: ${error}`);
                 }
             }
         }
@@ -2806,7 +2806,7 @@ async function run() {
             (0, child_process_1.execSync)('docker node ls || docker swarm init', { stdio: [] });
         }
         catch (error) {
-            core.setFailed(`Failed to initialise Swarm: ${error}`);
+            throw new Error(`Failed to initialise Swarm: ${error}`);
         }
         const dockerStackAwaitImage = 'sudobmitch/docker-stack-wait:v0.2.5';
         (0, child_process_1.execSync)(`docker pull ${dockerStackAwaitImage}`, { stdio: [] });
@@ -2815,14 +2815,14 @@ async function run() {
             (0, child_process_1.execSync)(`docker stack deploy --compose-file ${composeFile} --prune --with-registry-auth ${stackName}`, { stdio: [] });
         }
         catch (error) {
-            core.setFailed(`Failed to initialise deploy stack: ${error}`);
+            throw new Error(`Failed to deploy stack: ${error}`);
         }
         core.info('Waiting for deployment to complete ...');
         try {
             (0, child_process_1.execSync)(`docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock ${dockerStackAwaitImage} -l "--since 2m" -t 120 ${stackName}`);
         }
         catch (error) {
-            core.setFailed(`Deployment appears to not complete: ${error}`);
+            throw new Error(`Deployment appears to not complete: ${error}`);
         }
         core.info('Cleaning up ...');
         (0, child_process_1.execSync)('docker system prune -af', { stdio: [] });
@@ -2849,62 +2849,34 @@ exports.cleanup = cleanup;
 /***/ }),
 
 /***/ 5739:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseSecrets = void 0;
 const yaml_1 = __nccwpck_require__(4083);
-const core = __importStar(__nccwpck_require__(2186));
 function parseSecrets(input) {
     const parsedSecrets = (0, yaml_1.parse)(input);
     if (parsedSecrets === null) {
         return;
     }
     if (!Array.isArray(parsedSecrets)) {
-        core.setFailed(`Secrets must be an array`);
-        return;
+        throw new Error('Secrets must be an array');
     }
     else {
         for (const secret of parsedSecrets) {
             if (typeof secret !== 'object') {
-                core.setFailed(`Secrets must be an array of objects`);
-                return;
+                throw new Error('Secrets must be an array of objects');
             }
             else {
                 const secretName = secret.name;
                 const secretValue = secret.value;
                 if (typeof secretName !== 'string') {
-                    core.setFailed(`Expected secret name to be a string, got ${typeof secretName} instead.`);
-                    return;
+                    throw new Error(`Expected secret name to be a string, got ${typeof secretName} instead.`);
                 }
                 else if (typeof secretValue !== 'string') {
-                    core.setFailed(`Expected secret value for ${secretName} to be a string, got ${typeof secretValue} instead.`);
-                    return;
+                    throw new Error(`Expected secret value for ${secretName} to be a string, got ${typeof secretValue} instead.`);
                 }
             }
         }

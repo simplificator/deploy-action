@@ -16,7 +16,7 @@ export async function run(): Promise<void> {
     const sshPort = core.getInput('ssh-port')
 
     if (!existsSync(composeFile)) {
-      core.setFailed(`Compose file ${composeFile} does not exist`)
+      throw new Error(`Compose file ${composeFile} does not exist`)
     }
 
     core.info('Check if system is reachable over SSH ...')
@@ -25,7 +25,7 @@ export async function run(): Promise<void> {
         stdio: []
       })
     } catch (error: unknown) {
-      core.setFailed(`SSH connection failed: ${error}`)
+      throw new Error(`SSH connection failed: ${error}`)
     }
 
     core.info('Creating docker context ...')
@@ -36,7 +36,7 @@ export async function run(): Promise<void> {
       )
       execSync(`docker context use target`, { stdio: [] })
     } catch (error: unknown) {
-      core.setFailed(`Failed to initialise context: ${error}`)
+      throw new Error(`Failed to create docker context: ${error}`)
     }
 
     const parsedSecrets = parseSecrets(secrets)
@@ -51,7 +51,7 @@ export async function run(): Promise<void> {
             }
           )
         } catch (error: unknown) {
-          core.setFailed(`Failed to create secret ${secret.name}: ${error}`)
+          throw new Error(`Failed to create secret ${secret.name}: ${error}`)
         }
       }
     }
@@ -60,7 +60,7 @@ export async function run(): Promise<void> {
       core.info('Initialising Swarm if required ...')
       execSync('docker node ls || docker swarm init', { stdio: [] })
     } catch (error: unknown) {
-      core.setFailed(`Failed to initialise Swarm: ${error}`)
+      throw new Error(`Failed to initialise Swarm: ${error}`)
     }
 
     const dockerStackAwaitImage = 'sudobmitch/docker-stack-wait:v0.2.5'
@@ -73,7 +73,7 @@ export async function run(): Promise<void> {
         { stdio: [] }
       )
     } catch (error: unknown) {
-      core.setFailed(`Failed to initialise deploy stack: ${error}`)
+      throw new Error(`Failed to deploy stack: ${error}`)
     }
 
     core.info('Waiting for deployment to complete ...')
@@ -82,7 +82,7 @@ export async function run(): Promise<void> {
         `docker run --rm -i -v $(pwd)/${composeFile}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock ${dockerStackAwaitImage} -l "--since 2m" -t 120 ${stackName}`
       )
     } catch (error: unknown) {
-      core.setFailed(`Deployment appears to not complete: ${error}`)
+      throw new Error(`Deployment appears to not complete: ${error}`)
     }
 
     core.info('Cleaning up ...')

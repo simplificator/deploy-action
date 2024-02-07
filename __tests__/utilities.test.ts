@@ -1,22 +1,16 @@
-import * as core from '@actions/core'
 import { parseSecrets } from '../src/utilities'
 
 // Mock the GitHub Actions core library
-let setFailedMock: jest.SpyInstance
 
 describe('parseSecrets', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    setFailedMock = jest.spyOn(core, 'setFailed').mockImplementation()
-  })
-
   it('returns undefined if input is empty', () => {
     expect(parseSecrets('')).toBeUndefined()
   })
 
   it('sets an error if input is not an array', () => {
-    expect(parseSecrets('hello world')).toBeUndefined()
-    expect(setFailedMock).toHaveBeenCalledWith('Secrets must be an array')
+    expect(() => parseSecrets('hello world')).toThrow(
+      'Secrets must be an array'
+    )
   })
 
   it('sets an error if input is not an array of objects', () => {
@@ -24,8 +18,7 @@ describe('parseSecrets', () => {
       - hello world
       - how are you today?`
 
-    expect(parseSecrets(yaml)).toBeUndefined()
-    expect(setFailedMock).toHaveBeenCalledWith(
+    expect(() => parseSecrets(yaml)).toThrow(
       'Secrets must be an array of objects'
     )
   })
@@ -37,8 +30,7 @@ describe('parseSecrets', () => {
       - name: 123
         value: 456`
 
-    expect(parseSecrets(yaml)).toBeUndefined()
-    expect(setFailedMock).toHaveBeenCalledWith(
+    expect(() => parseSecrets(yaml)).toThrow(
       'Expected secret name to be a string, got number instead.'
     )
   })
@@ -50,8 +42,7 @@ describe('parseSecrets', () => {
       - name: how
         value: 123`
 
-    expect(parseSecrets(yaml)).toBeUndefined()
-    expect(setFailedMock).toHaveBeenCalledWith(
+    expect(() => parseSecrets(yaml)).toThrow(
       'Expected secret value for how to be a string, got number instead.'
     )
   })
@@ -68,6 +59,5 @@ describe('parseSecrets', () => {
       { name: 'hello', value: 'world' },
       { name: 'how', value: 'are you today?' }
     ])
-    expect(setFailedMock).not.toHaveBeenCalled()
   })
 })

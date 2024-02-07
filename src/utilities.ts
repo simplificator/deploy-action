@@ -1,5 +1,4 @@
 import { parse } from 'yaml'
-import * as core from '@actions/core'
 
 interface Secret {
   name: string
@@ -14,27 +13,23 @@ export function parseSecrets(input: string): Secret[] | undefined {
   }
 
   if (!Array.isArray(parsedSecrets)) {
-    core.setFailed(`Secrets must be an array`)
-    return
+    throw new Error('Secrets must be an array')
   } else {
     for (const secret of parsedSecrets) {
       if (typeof secret !== 'object') {
-        core.setFailed(`Secrets must be an array of objects`)
-        return
+        throw new Error('Secrets must be an array of objects')
       } else {
         const secretName = secret.name
         const secretValue = secret.value
 
         if (typeof secretName !== 'string') {
-          core.setFailed(
+          throw new Error(
             `Expected secret name to be a string, got ${typeof secretName} instead.`
           )
-          return
         } else if (typeof secretValue !== 'string') {
-          core.setFailed(
+          throw new Error(
             `Expected secret value for ${secretName} to be a string, got ${typeof secretValue} instead.`
           )
-          return
         }
       }
     }
