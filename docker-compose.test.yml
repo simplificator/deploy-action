@@ -4,5 +4,11 @@ services:
   web:
     image: "hashicorp/http-echo"
     command: ["-listen", ":8080", "-text", "Hello World"]
+    secrets:
+      - secret
     ports:
       - 8080:8080
+
+secrets:
+  secret:
+    external: true

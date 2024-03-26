@@ -37,16 +37,20 @@ jobs:
           compose-file: docker-compose.yml
           stack-name: my-app
           ssh-user-at-host: deployer@123.124.125.126
+          secrets: |
+            - name: secret
+              value: ${{ secrets.SECRET }}
 ```
 
 ## Inputs
 
-| Name               | Description                                                    |
-|--------------------|----------------------------------------------------------------|
-| `compose-file`     | Path to your docker compose definition inside the repository.  |
-| `stack-name`       | Name of the Docker Stack that shoud be created on your server. |
-| `ssh-user-at-host` | User@host to connect to (e.g. `hello@myhost.com`)              |
-| `ssh-port`         | SSH port to connect to. Defaults to 22 if not defined.         |
+| Name               | Description                                                                                                                                                                                         |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `compose-file`     | Path to your docker compose definition inside the repository.                                                                                                                                       |
+| `secrets`          | Allows to define a YAML array of Docker secrets which should be created (not required). You need to define it as a multiline YAML string, as this is technically not supported by Actions directly. |
+| `stack-name`       | Name of the Docker Stack that shoud be created on your server.                                                                                                                                      |
+| `ssh-user-at-host` | User@host to connect to (e.g. `hello@myhost.com`)                                                                                                                                                   |
+| `ssh-port`         | SSH port to connect to. Defaults to 22 if not defined.                                                                                                                                              |
 
 ## License
 

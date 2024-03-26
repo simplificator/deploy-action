@@ -13,6 +13,10 @@ inputs:
     description: 'Path to the docker-compose file'
     required: true
 
+  secrets:
+    description: "Docker secrets to create during the stack"
+    required: false
+
   stack-name:
     description: 'Name of the stack to deploy'
     required: true
@@ -20,7 +24,7 @@ inputs:
   ssh-user-at-host:
     description: 'User@host to connect to'
     required: true
-  
+
   ssh-port:
     description: "Port to connect to with SSH"
     required: false
@@ -42,6 +46,18 @@ runs:
     - name: Initialising Swarm if required
       run: docker node ls || docker swarm init
       shell: bash
+
+    - name: Create secrets
+      run: |
+        echo "${{ inputs.secrets }}" | yq e '.[]' - | while IFS= read -r line; do
+          secret_name=$(echo "$line" | yq e '.name' -)
+          secret_value=$(echo "$line" | yq e '.value' -)
+
+          # Execute the Docker secret command
+          docker secret inspect "$secret_name" > /dev/null 2>&1 || echo "$secret_value" | docker secret create "$secret_name" -
+        done
+      shell: bash
+      if: "${{ inputs.secrets != '' }}"
 
     - name: Pull docker-stack-wait image
       run: docker pull sudobmitch/docker-stack-wait:v0.2.5
