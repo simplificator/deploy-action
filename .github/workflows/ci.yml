@@ -10,38 +10,24 @@ permissions:
   contents: read
 
 jobs:
-  test-typescript:
-    name: TypeScript Tests
+  test:
+    name: Tests
     runs-on: ubuntu-latest
 
     steps:
+      # cloning into "root" does not work when trying to call the action from itself
+      # inspired by Microsoft: https://github.com/microsoft/action-python/blob/c8ec939994d7ed2ec77b7bbe59ed5f5b72fb5607/.github/workflows/test.yml#L21
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        id: setup-node
-        uses: actions/setup-node@v4
         with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: Install Dependencies
-        id: npm-ci
-        run: npm ci
-
-      - name: Check Format
-        id: npm-format-check
-        run: npm run format:check
-
-      - name: Lint
-        id: npm-lint
-        run: npm run lint
+          path: action
+          clean: true
 
       - name: Run test server
         run: |
           docker compose build
           docker compose up &
+        working-directory: action
 
       - name: Add SSH identity of test server to known hosts
         run: |
@@ -49,5 +35,21 @@ jobs:
           ssh-keyscan -t rsa -p 2222 127.0.0.1 >> ~/.ssh/known_hosts
 
       - name: Test
-        id: npm-ci-test
-        run: npm run ci-test
+        uses: ./action
+        with:
+          compose-file: action/docker-compose.test.yml
+          stack-name: david
+          ssh-user-at-host: david@127.0.0.1
+          ssh-port: 2222
+
+      - name: Check if test application is available
+        run: |
+          response=$(curl -s 'http://127.0.0.1:8888')
+          if echo "$response" | grep -q "Hello World"; then
+              echo "Pattern matched."
+              exit 0
+          else
+              echo "Pattern not matched."
+              exit 1
+          fi
+        shell: bash
