@@ -1,11 +1,11 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Deploy'
+description: 'Deploy an application using Docker Swarm'
+author: 'Simplificator AG'
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: 'heart'
-  color: 'red'
+  icon: 'activity'
+  color: 'black'
 
 # Define your inputs here.
 inputs:
@@ -27,6 +27,36 @@ inputs:
     default: "22"
 
 runs:
-  using: node20
-  main: dist/index.js
-  post: dist/index.js
+  using: "composite"
+  steps:
+    - name: Check if system is available through SSH
+      run: "ssh -o ConnectTimeout=5 -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user-at-host }} exit"
+      shell: bash
+
+    - name: Create Docker context
+      run: |
+        docker context create target --docker "host=ssh://${{ inputs.ssh-user-at-host }}:${{ inputs.ssh-port }}"
+        docker context use target
+      shell: bash
+
+    - name: Initialising Swarm if required
+      run: docker node ls || docker swarm init
+      shell: bash
+
+    - name: Pull docker-stack-wait image
+      run: docker pull sudobmitch/docker-stack-wait:v0.2.5
+      shell: bash
+
+    - name: Deploying stack
+      run: docker stack deploy --compose-file ${{ inputs.compose-file }} --prune --with-registry-auth ${{ inputs.stack-name }}
+      shell: bash
+
+    - name: Waiting for deployment to complete
+      run: docker run --rm -i -v $(pwd)/${{ inputs.compose-file }}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock sudobmitch/docker-stack-wait:v0.2.5 -l "--since 2m" -t 120 ${{ inputs.stack-name }}
+      shell: bash
+
+    - name: Cleaning up
+      run: |
+        docker system prune -af
+        docker context remove --force target
+      shell: bash
