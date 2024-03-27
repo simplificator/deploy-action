@@ -13,6 +13,14 @@ inputs:
     description: 'Path to the docker-compose file'
     required: true
 
+  environment:
+    description: "The name of the environment for the deployment"
+    required: false
+
+  environment-url:
+    description: "A URL to access your deployment"
+    required: false
+
   secrets:
     description: "Docker secrets to create during the stack"
     required: false
@@ -33,6 +41,16 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - uses: chrnorm/deployment-action@v2
+      name: Create GitHub deployment
+      id: deployment
+      with:
+        token: "${{ github.token }}"
+        environment-url: "${{ inputs.environment-url }}"
+        environment: "${{ inputs.environment }}"
+        initial-status: "in_progress"
+      if: "${{ inputs.environment != '' && inputs.environment-url != '' }}"
+
     - name: Check if system is available through SSH
       run: "ssh -o ConnectTimeout=5 -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user-at-host }} exit"
       shell: bash
@@ -76,3 +94,21 @@ runs:
         docker system prune -af
         docker context remove --force target
       shell: bash
+
+    - name: Update deployment status (success)
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: "${{ github.token }}"
+        environment-url: "${{ steps.deployment.outputs.environment_url }}"
+        deployment-id: "${{ steps.deployment.outputs.deployment_id }}"
+        state: "success"
+      if: "${{ inputs.environment != '' && inputs.environment-url != '' && success() }}"
+
+    - name: Update deployment status (failed)
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: "${{ github.token }}"
+        environment-url: "${{ steps.deployment.outputs.environment_url }}"
+        deployment-id: "${{ steps.deployment.outputs.deployment_id }}"
+        state: "failure"
+      if: "${{ inputs.environment != '' && inputs.environment-url != '' && failure() }}"

@@ -14,6 +14,9 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
 
+    permissions:
+      deployments: write
+
     steps:
       # cloning into "root" does not work when trying to call the action from itself
       # inspired by Microsoft: https://github.com/microsoft/action-python/blob/c8ec939994d7ed2ec77b7bbe59ed5f5b72fb5607/.github/workflows/test.yml#L21
@@ -38,6 +41,8 @@ jobs:
         uses: ./action
         with:
           compose-file: action/docker-compose.test.yml
+          environment: "test"
+          environment-url: "https://www.simplificator.com"
           secrets: |
             - name: secret
               value: ${{ secrets.SECRET }}
