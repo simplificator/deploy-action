@@ -38,6 +38,9 @@ jobs:
         uses: ./action
         with:
           compose-file: action/docker-compose.test.yml
+          secrets: |
+            - name: secret
+              value: ${{ secrets.SECRET }}
           stack-name: david
           ssh-user-at-host: david@127.0.0.1
           ssh-port: 2222
