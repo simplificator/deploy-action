@@ -15,6 +15,9 @@ on:
 jobs:
   deploy:
     runs-on: "ubuntu-latest"
+    permissions:
+      deployments: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,6 +38,8 @@ jobs:
         uses: simplificator/deploy-action@main
         with:
           compose-file: docker-compose.yml
+          environment: production
+          environment-url: https://example.com
           stack-name: my-app
           ssh-user-at-host: deployer@123.124.125.126
           secrets: |
@@ -44,13 +49,15 @@ jobs:
 
 ## Inputs
 
-| Name               | Description                                                                                                                                                                                         |
-|--------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `compose-file`     | Path to your docker compose definition inside the repository.                                                                                                                                       |
-| `secrets`          | Allows to define a YAML array of Docker secrets which should be created (not required). You need to define it as a multiline YAML string, as this is technically not supported by Actions directly. |
-| `stack-name`       | Name of the Docker Stack that shoud be created on your server.                                                                                                                                      |
-| `ssh-user-at-host` | User@host to connect to (e.g. `hello@myhost.com`)                                                                                                                                                   |
-| `ssh-port`         | SSH port to connect to. Defaults to 22 if not defined.                                                                                                                                              |
+| Name               | Description                                                                                                                                                                                     |
+|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `compose-file`     | Path to your docker compose definition inside the repository.                                                                                                                                   |
+| `environment`      | The name of the environment for the deployment (optional). Used to create a GitHub deployment.                                                                                                  |
+| `environment-url`  | A URL to access your deployment (optional). Used to create a GitHub deployment.                                                                                                                 |
+| `secrets`          | Allows to define a YAML array of Docker secrets which should be created (optional). You need to define it as a multiline YAML string, as this is technically not supported by Actions directly. |
+| `stack-name`       | Name of the Docker Stack that shoud be created on your server.                                                                                                                                  |
+| `ssh-user-at-host` | User@host to connect to (e.g. `hello@myhost.com`)                                                                                                                                               |
+| `ssh-port`         | SSH port to connect to. Defaults to 22 if not defined.                                                                                                                                          |
 
 ## License
 
