@@ -37,6 +37,11 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -t rsa -p 2222 127.0.0.1 >> ~/.ssh/known_hosts
 
+      - name: Run a container to verify that docker system prune will work
+        run: |
+          ssh -p 2222 david@127.0.0.1 docker run --name debian debian:12
+        shell: bash
+
       - name: Test
         uses: ./action
         with:
@@ -58,6 +63,27 @@ jobs:
               exit 0
           else
               echo "Pattern not matched."
+              exit 1
+          fi
+        shell: bash
+
+      - name: Check that docker-stack-wait image is still there
+        run: |
+          ssh -p 2222 david@127.0.0.1 docker image inspect sudobmitch/docker-stack-wait:v0.2.5
+        shell: bash
+
+      - name: Check that the Debian container got removed
+        run: |
+          if ssh -p 2222 david@127.0.0.1 docker container inspect debian; then
+              echo "Debian container was not cleaned up!"
+              exit 1
+          fi
+        shell: bash
+
+      - name: Check that the Debian image got removed
+        run: |
+          if ssh -p 2222 david@127.0.0.1 docker image inspect debian:12; then
+              echo "Debian image was not cleaned up!"
               exit 1
           fi
         shell: bash

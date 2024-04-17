@@ -91,7 +91,7 @@ runs:
 
     - name: Cleaning up
       run: |
-        docker system prune -af
+        docker system prune -af --filter 'label!=org.opencontainers.image.source=git://github.com/sudo-bmitch/docker-stack-wait.git' --filter 'label!=org.opencontainers.image.version=v0.2.5'
         docker context remove --force target
       shell: bash
 
