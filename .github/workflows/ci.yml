@@ -21,7 +21,7 @@ jobs:
       # cloning into "root" does not work when trying to call the action from itself
       # inspired by Microsoft: https://github.com/microsoft/action-python/blob/c8ec939994d7ed2ec77b7bbe59ed5f5b72fb5607/.github/workflows/test.yml#L21
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: action
           clean: true
