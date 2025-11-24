@@ -1,16 +1,16 @@
-name: 'Deploy'
-description: 'Deploy an application using Docker Swarm'
-author: 'Simplificator AG'
+name: "Deploy"
+description: "Deploy an application using Docker Swarm"
+author: "Simplificator AG"
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: 'activity'
-  color: 'black'
+  icon: "activity"
+  color: "black"
 
 # Define your inputs here.
 inputs:
   compose-file:
-    description: 'Path to the docker-compose file'
+    description: "Path to the docker-compose file"
     required: true
 
   environment:
@@ -26,11 +26,11 @@ inputs:
     required: false
 
   stack-name:
-    description: 'Name of the stack to deploy'
+    description: "Name of the stack to deploy"
     required: true
 
   ssh-user-at-host:
-    description: 'User@host to connect to'
+    description: "User@host to connect to"
     required: true
 
   ssh-port:
@@ -77,21 +77,13 @@ runs:
       shell: bash
       if: "${{ inputs.secrets != '' }}"
 
-    - name: Pull docker-stack-wait image
-      run: docker pull sudobmitch/docker-stack-wait:v0.2.5
-      shell: bash
-
     - name: Deploying stack
-      run: docker stack deploy --compose-file ${{ inputs.compose-file }} --prune --with-registry-auth ${{ inputs.stack-name }}
-      shell: bash
-
-    - name: Waiting for deployment to complete
-      run: docker run --rm -i -v $(pwd)/${{ inputs.compose-file }}:/docker-compose.yml -v /var/run/docker.sock:/var/run/docker.sock sudobmitch/docker-stack-wait:v0.2.5 -l "--since 2m" -t 120 ${{ inputs.stack-name }}
+      run: docker stack deploy --detach=false --compose-file ${{ inputs.compose-file }} --prune --with-registry-auth ${{ inputs.stack-name }}
       shell: bash
 
     - name: Cleaning up
       run: |
-        docker system prune -af --filter 'label!=org.opencontainers.image.source=git://github.com/sudo-bmitch/docker-stack-wait.git' --filter 'label!=org.opencontainers.image.version=v0.2.5'
+        docker system prune -af
         docker context remove --force target
       shell: bash
 
