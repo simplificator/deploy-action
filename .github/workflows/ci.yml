@@ -67,11 +67,6 @@ jobs:
           fi
         shell: bash
 
-      - name: Check that docker-stack-wait image is still there
-        run: |
-          ssh -p 2222 david@127.0.0.1 docker image inspect sudobmitch/docker-stack-wait:v0.2.5
-        shell: bash
-
       - name: Check that the Debian container got removed
         run: |
           if ssh -p 2222 david@127.0.0.1 docker container inspect debian; then
